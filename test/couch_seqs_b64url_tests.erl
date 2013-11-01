@@ -5,11 +5,15 @@
 -include_lib("eunit/include/eunit.hrl").
 
 
+table_test_() ->
+    ?_assertEqual(ok, couch_seqs_b64url:check_tables()).
+
+
 proper_test_() ->
     PropErOpts = [
         {to_file, user},
         {max_size, 6401},
-        {numtests, 1000}
+        {numtests, 500}
     ],
     {timeout, 3600, ?_assertEqual([], proper:module(?MODULE, PropErOpts))}.
 
@@ -23,26 +27,61 @@ prop_encode_binary() ->
 
 
 prop_encode_iolist() ->
-    ?FORALL(Bin, binary(), begin
-        A = couch_encode_base64url(Bin),
-        B = couch_seqs_b64url:encode(to_iolist(Bin)),
+    ?FORALL(IoList, shallow_iolist(), begin
+        A = couch_encode_base64url(iolist_to_binary(IoList)),
+        B = couch_seqs_b64url:encode(IoList),
         A == B
     end).
 
 
-couch_encode_base64url(Url) ->
-    Url1 = iolist_to_binary(re:replace(base64:encode(Url), "=+$", "")),
-    Url2 = iolist_to_binary(re:replace(Url1, "/", "_", [global])),
-    iolist_to_binary(re:replace(Url2, "\\+", "-", [global])).
+prop_decode_binary() ->
+    ?FORALL(Bin, binary(), begin
+        B64UrlBin = couch_encode_base64url(Bin),
+        Dec = couch_seqs_b64url:decode(B64UrlBin),
+        Dec == Bin
+    end).
 
 
-couch_decode_base64url(Url64) ->
-    Url1 = re:replace(iolist_to_binary(Url64), "-", "+", [global]),
-    Url2 = iolist_to_binary(
-        re:replace(iolist_to_binary(Url1), "_", "/", [global])
-    ),
-    Padding = list_to_binary(lists:duplicate((4 - size(Url2) rem 4) rem 4, $=)),
-    base64:decode(<<Url2/binary, Padding/binary>>).
+prop_decode_iolist() ->
+    ?FORALL(IoList, shallow_b64_iolist(), begin
+        A = couch_decode_base64url(iolist_to_binary(IoList)),
+        B = couch_seqs_b64url:decode(IoList),
+        A == B
+    end).
+
+
+prop_decode_binary_error() ->
+    ?FORALL({ErrBin, BlockPos}, bad_binary(), begin
+        Dec = couch_seqs_b64url:decode(ErrBin),
+        Dec == {error, {bad_block, BlockPos}}
+    end).
+
+
+prop_decode_bad_length() ->
+    ?FORALL(Bin, bad_len_binary(), begin
+        try
+            couch_seqs_b64url:decode(Bin),
+            false
+        catch error:badarg ->
+            true
+        end
+    end).
+
+
+shallow_iolist() ->
+    ?LET(Bin, binary(), to_iolist(Bin)).
+
+
+shallow_b64_iolist() ->
+    ?LET(Bin, binary(), to_iolist(couch_encode_base64url(Bin))).
+
+
+bad_binary() ->
+    ?LET(Bin, binary(), insert_error(Bin)).
+
+
+bad_len_binary() ->
+    ?LET(Bin, binary(), make_bad_len(Bin)).
 
 
 to_iolist(<<>>) ->
@@ -63,3 +102,37 @@ to_iolist(B) when is_binary(B), size(B) > 0 ->
     end.
 
 
+insert_error(B) when is_binary(B), size(B) < 2 ->
+    case random:uniform(2) of
+        1 -> {<<122, 255>>, 0};
+        2 -> {<<122, 122, 255>>, 0}
+    end;
+insert_error(B) when is_binary(B) ->
+    B64 = couch_encode_base64url(B),
+    S = random:uniform(size(B64)-1),
+    <<First:S/binary, _:1/binary, Second/binary>> = B64,
+    {<<First:S/binary, 255, Second/binary>>, 4 * (S div 4)}.
+
+
+make_bad_len(Bin) when size(Bin) rem 4 == 1 ->
+    Bin;
+make_bad_len(Bin) when size(Bin) rem 4 == 2 ->
+    <<"AAA", Bin/binary>>;
+make_bad_len(Bin) when size(Bin) rem 4 == 3 ->
+    <<"AA", Bin/binary>>;
+make_bad_len(Bin) when size(Bin) rem 4 == 0 ->
+    <<"A", Bin/binary>>.
+
+couch_encode_base64url(Url) ->
+    Url1 = iolist_to_binary(re:replace(base64:encode(Url), "=+$", "")),
+    Url2 = iolist_to_binary(re:replace(Url1, "/", "_", [global])),
+    iolist_to_binary(re:replace(Url2, "\\+", "-", [global])).
+
+
+couch_decode_base64url(Url64) ->
+    Url1 = re:replace(iolist_to_binary(Url64), "-", "+", [global]),
+    Url2 = iolist_to_binary(
+        re:replace(iolist_to_binary(Url1), "_", "/", [global])
+    ),
+    Padding = list_to_binary(lists:duplicate((4 - size(Url2) rem 4) rem 4, $=)),
+    base64:decode(<<Url2/binary, Padding/binary>>).

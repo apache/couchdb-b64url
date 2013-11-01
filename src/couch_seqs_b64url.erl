@@ -8,6 +8,12 @@
 ]).
 
 
+% Internal sanity checks
+-export([
+    check_tables/0
+]).
+
+
 -define(NOT_LOADED, not_loaded(?LINE)).
 
 
@@ -26,9 +32,15 @@ decode(IoData) ->
     case decode_init(IoData) of
         {ok, Bin} ->
             Bin;
+        {error, _} = Ret ->
+            Ret;
         {partial, St} ->
             decode_loop(IoData, St)
     end.
+
+-spec check_tables() -> ok | {error, non_neg_integer()}.
+check_tables() ->
+    ?NOT_LOADED.
 
 
 init() ->
@@ -56,6 +68,8 @@ decode_loop(IoData, St) ->
     case decode_cont(IoData, St) of
         {ok, Bin} ->
             Bin;
+        {error, _} = Ret ->
+            Ret;
         {partial, St} ->
             decode_loop(IoData, St)
     end.
