@@ -233,11 +233,11 @@ cseq_b64url_encode(ErlNifEnv* env, ErlNifBinary* src, cseq_st* st)
         }
     }
 
-    if(src->size - st->si == 2) {
+    if(src->size % 3 == 1) {
         c1 = src->data[st->si];
         st->tgt->data[st->ti++] = B64URL_B2A[(c1 >> 2) & 0x3F];
         st->tgt->data[st->ti++] = B64URL_B2A[(c1 << 4) & 0x3F];
-    } else if(src->size - st->si == 1) {
+    } else if(src->size % 3 == 2) {
         c1 = src->data[st->si];
         c2 = src->data[st->si+1];
         st->tgt->data[st->ti++] = B64URL_B2A[(c1 >> 2) & 0x3F];
@@ -267,10 +267,6 @@ cseq_b64url_encode_init(ErlNifEnv* env, int argc, const ENTERM argv[])
     }
 
     if(!enif_inspect_iolist_as_binary(env, argv[0], &src)) {
-        return enif_make_badarg(env);
-    }
-
-    if(src.size <= 0) {
         return enif_make_badarg(env);
     }
 
