@@ -123,6 +123,7 @@ make_bad_len(Bin) when size(Bin) rem 4 == 3 ->
 make_bad_len(Bin) when size(Bin) rem 4 == 0 ->
     <<"A", Bin/binary>>.
 
+
 couch_encode_base64url(Url) ->
     Url1 = iolist_to_binary(re:replace(base64:encode(Url), "=+$", "")),
     Url2 = iolist_to_binary(re:replace(Url1, "/", "_", [global])),
