@@ -1,4 +1,4 @@
--module(couch_seqs_b64url).
+-module(b64url).
 -on_load(init/0).
 
 
@@ -52,7 +52,7 @@ init() ->
         Path ->
             Path
     end,
-    erlang:load_nif(filename:join(PrivDir, "couch_seqs_b64"), 0).
+    erlang:load_nif(filename:join(PrivDir, "b64url"), 0).
 
 
 encode_loop(IoData, St) ->

@@ -625,6 +625,6 @@ static ErlNifFunc funcs[] = {
 };
 
 
-ERL_NIF_INIT(couch_seqs_b64url, funcs, &load, &reload, &upgrade, &unload);
+ERL_NIF_INIT(b64url, funcs, &load, &reload, &upgrade, &unload);
 
 

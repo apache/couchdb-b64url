@@ -1,6 +1,0 @@
-{application, couch_seqs, [
-    {description, "A library for handling couch sequences"},
-    {vsn, git},
-    {registered, []},
-    {applications, [kernel]}
-]}.

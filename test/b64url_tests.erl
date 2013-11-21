@@ -1,4 +1,4 @@
--module(couch_seqs_b64url_tests).
+-module(b64url_tests).
 -compile(export_all).
 
 -include_lib("proper/include/proper.hrl").
@@ -6,7 +6,7 @@
 
 
 table_test_() ->
-    ?_assertEqual(ok, couch_seqs_b64url:check_tables()).
+    ?_assertEqual(ok, b64url:check_tables()).
 
 
 proper_test_() ->
@@ -21,7 +21,7 @@ proper_test_() ->
 prop_encode_binary() ->
     ?FORALL(Bin, binary(), begin
         A = couch_encode_base64url(Bin),
-        B = couch_seqs_b64url:encode(Bin),
+        B = b64url:encode(Bin),
         A == B
     end).
 
@@ -29,7 +29,7 @@ prop_encode_binary() ->
 prop_encode_iolist() ->
     ?FORALL(IoList, shallow_iolist(), begin
         A = couch_encode_base64url(iolist_to_binary(IoList)),
-        B = couch_seqs_b64url:encode(IoList),
+        B = b64url:encode(IoList),
         A == B
     end).
 
@@ -37,7 +37,7 @@ prop_encode_iolist() ->
 prop_decode_binary() ->
     ?FORALL(Bin, binary(), begin
         B64UrlBin = couch_encode_base64url(Bin),
-        Dec = couch_seqs_b64url:decode(B64UrlBin),
+        Dec = b64url:decode(B64UrlBin),
         Dec == Bin
     end).
 
@@ -45,14 +45,14 @@ prop_decode_binary() ->
 prop_decode_iolist() ->
     ?FORALL(IoList, shallow_b64_iolist(), begin
         A = couch_decode_base64url(iolist_to_binary(IoList)),
-        B = couch_seqs_b64url:decode(IoList),
+        B = b64url:decode(IoList),
         A == B
     end).
 
 
 prop_decode_binary_error() ->
     ?FORALL({ErrBin, BlockPos}, bad_binary(), begin
-        Dec = couch_seqs_b64url:decode(ErrBin),
+        Dec = b64url:decode(ErrBin),
         Dec == {error, {bad_block, BlockPos}}
     end).
 
@@ -60,7 +60,7 @@ prop_decode_binary_error() ->
 prop_decode_bad_length() ->
     ?FORALL(Bin, bad_len_binary(), begin
         try
-            couch_seqs_b64url:decode(Bin),
+            b64url:decode(Bin),
             false
         catch error:badarg ->
             true
