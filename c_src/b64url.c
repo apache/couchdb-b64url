@@ -494,7 +494,7 @@ b64url_decode_init(ErlNifEnv* env, int argc, const ENTERM argv[])
     b64url_st* st = NULL;
     size_t tlen;
     int status;
-    ENTERM ret;
+    ENTERM ret = priv->atom_error;
 
     if(argc != 1) {
         return enif_make_badarg(env);
