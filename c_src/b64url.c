@@ -18,7 +18,7 @@ typedef struct
     ENTERM atom_bad_block;
 
     ErlNifResourceType* res_st;
-} cseq_priv;
+} b64url_priv;
 
 
 typedef struct
@@ -28,7 +28,7 @@ typedef struct
     size_t        len;
     size_t        si;
     size_t        ti;
-} cseq_st;
+} b64url_st;
 
 
 typedef enum
@@ -36,7 +36,7 @@ typedef enum
     ST_OK,
     ST_ERROR,
     ST_PARTIAL
-} cseq_status;
+} b64url_status;
 
 
 const unsigned char B64URL_B2A[256] = {
@@ -102,21 +102,21 @@ make_atom(ErlNifEnv* env, const char* name)
 
 
 static inline ENTERM
-make_ok(ErlNifEnv* env, cseq_priv* priv, ENTERM value)
+make_ok(ErlNifEnv* env, b64url_priv* priv, ENTERM value)
 {
     return enif_make_tuple2(env, priv->atom_ok, value);
 }
 
 
 static inline ENTERM
-make_error(ErlNifEnv* env, cseq_priv* priv, ENTERM value)
+make_error(ErlNifEnv* env, b64url_priv* priv, ENTERM value)
 {
     return enif_make_tuple2(env, priv->atom_error, value);
 }
 
 
 static inline ENTERM
-make_bad_block(ErlNifEnv* env, cseq_priv* priv, size_t pos)
+make_bad_block(ErlNifEnv* env, b64url_priv* priv, size_t pos)
 {
     ENTERM pterm = enif_make_uint64(env, pos);
     return enif_make_tuple2(env, priv->atom_bad_block, pterm);
@@ -124,14 +124,14 @@ make_bad_block(ErlNifEnv* env, cseq_priv* priv, size_t pos)
 
 
 static inline ENTERM
-make_partial(ErlNifEnv* env, cseq_priv* priv, ENTERM value)
+make_partial(ErlNifEnv* env, b64url_priv* priv, ENTERM value)
 {
     return enif_make_tuple2(env, priv->atom_partial, value);
 }
 
 
 static inline int
-check_pid(ErlNifEnv* env, cseq_st* st)
+check_pid(ErlNifEnv* env, b64url_st* st)
 {
     ErlNifPid self_pid;
     ENTERM self;
@@ -149,15 +149,15 @@ check_pid(ErlNifEnv* env, cseq_st* st)
 }
 
 
-static cseq_st*
-cseq_st_alloc(ErlNifEnv* env, cseq_priv* priv, ErlNifBinary* src, size_t tlen)
+static b64url_st*
+b64url_st_alloc(ErlNifEnv* env, b64url_priv* priv, ErlNifBinary* src, size_t tlen)
 {
-    cseq_st* st = enif_alloc_resource(priv->res_st, sizeof(cseq_st));
+    b64url_st* st = enif_alloc_resource(priv->res_st, sizeof(b64url_st));
     if(st == NULL) {
         goto error;
     }
 
-    memset(st, '\0', sizeof(cseq_st));
+    memset(st, '\0', sizeof(b64url_st));
     enif_self(env, &(st->pid));
     st->len = src->size;
     st->si = 0;
@@ -182,9 +182,9 @@ error:
 
 
 static void
-cseq_st_free(ErlNifEnv* env, void* obj)
+b64url_st_free(ErlNifEnv* env, void* obj)
 {
-    cseq_st* st = (cseq_st*) obj;
+    b64url_st* st = (b64url_st*) obj;
 
     if(st->tgt != NULL) {
         enif_release_binary(st->tgt);
@@ -193,9 +193,9 @@ cseq_st_free(ErlNifEnv* env, void* obj)
 }
 
 static ENTERM
-cseq_st_enc_ret(ErlNifEnv* env, cseq_st* st, int status)
+b64url_st_enc_ret(ErlNifEnv* env, b64url_st* st, int status)
 {
-    cseq_priv* priv = (cseq_priv*) enif_priv_data(env);
+    b64url_priv* priv = (b64url_priv*) enif_priv_data(env);
     ENTERM ret;
 
     if(status == ST_OK) {
@@ -214,9 +214,9 @@ cseq_st_enc_ret(ErlNifEnv* env, cseq_st* st, int status)
 }
 
 static ENTERM
-cseq_st_dec_ret(ErlNifEnv* env, cseq_st* st, int status, ENTERM ret)
+b64url_st_dec_ret(ErlNifEnv* env, b64url_st* st, int status, ENTERM ret)
 {
-    cseq_priv* priv = (cseq_priv*) enif_priv_data(env);
+    b64url_priv* priv = (b64url_priv*) enif_priv_data(env);
 
     if(status == ST_OK) {
         ret = make_ok(env, priv, enif_make_binary(env, st->tgt));
@@ -241,13 +241,13 @@ load(ErlNifEnv* env, void** priv, ENTERM info)
     int flags = ERL_NIF_RT_CREATE | ERL_NIF_RT_TAKEOVER;
     ErlNifResourceType* res;
 
-    cseq_priv* new_priv = (cseq_priv*) enif_alloc(sizeof(cseq_priv));
+    b64url_priv* new_priv = (b64url_priv*) enif_alloc(sizeof(b64url_priv));
     if(new_priv == NULL) {
         return 1;
     }
 
     res = enif_open_resource_type(
-            env, NULL, "couch_seq", cseq_st_free, flags, NULL);
+            env, NULL, "couch_seq", b64url_st_free, flags, NULL);
     if(res == NULL) {
         return 1;
     }
@@ -287,8 +287,8 @@ unload(ErlNifEnv* env, void* priv)
 }
 
 
-static inline cseq_status
-cseq_b64url_encode(ErlNifEnv* env, ErlNifBinary* src, cseq_st* st)
+static inline b64url_status
+b64url_encode(ErlNifEnv* env, ErlNifBinary* src, b64url_st* st)
 {
     size_t chunk_start = st->si;
     unsigned char c1;
@@ -336,11 +336,11 @@ cseq_b64url_encode(ErlNifEnv* env, ErlNifBinary* src, cseq_st* st)
 
 
 static ENTERM
-cseq_b64url_encode_init(ErlNifEnv* env, int argc, const ENTERM argv[])
+b64url_encode_init(ErlNifEnv* env, int argc, const ENTERM argv[])
 {
     ErlNifBinary src;
-    cseq_priv* priv = (cseq_priv*) enif_priv_data(env);
-    cseq_st* st = NULL;
+    b64url_priv* priv = (b64url_priv*) enif_priv_data(env);
+    b64url_st* st = NULL;
     size_t tlen;
     size_t rem;
     int status;
@@ -366,15 +366,15 @@ cseq_b64url_encode_init(ErlNifEnv* env, int argc, const ENTERM argv[])
         tlen += 3;
     }
 
-    st = cseq_st_alloc(env, priv, &src, tlen);
+    st = b64url_st_alloc(env, priv, &src, tlen);
     if(st == NULL) {
         ret = make_error(env, priv, priv->atom_nomem);
         goto error;
     }
 
-    status = cseq_b64url_encode(env, &src, st);
+    status = b64url_encode(env, &src, st);
 
-    return cseq_st_enc_ret(env, st, status);
+    return b64url_st_enc_ret(env, st, status);
 
 error:
     if(st != NULL) {
@@ -386,11 +386,11 @@ error:
 
 
 static ENTERM
-cseq_b64url_encode_cont(ErlNifEnv* env, int argc, const ENTERM argv[])
+b64url_encode_cont(ErlNifEnv* env, int argc, const ENTERM argv[])
 {
     ErlNifBinary src;
-    cseq_priv* priv = (cseq_priv*) enif_priv_data(env);
-    cseq_st* st = NULL;
+    b64url_priv* priv = (b64url_priv*) enif_priv_data(env);
+    b64url_st* st = NULL;
     int status;
 
     if(argc != 2) {
@@ -413,16 +413,16 @@ cseq_b64url_encode_cont(ErlNifEnv* env, int argc, const ENTERM argv[])
         return enif_make_badarg(env);
     }
 
-    status = cseq_b64url_encode(env, &src, st);
+    status = b64url_encode(env, &src, st);
 
-    return cseq_st_enc_ret(env, st, status);
+    return b64url_st_enc_ret(env, st, status);
 }
 
 
-static inline cseq_status
-cseq_b64url_decode(ErlNifEnv* env, ErlNifBinary* src, cseq_st* st, ENTERM* ret)
+static inline b64url_status
+b64url_decode(ErlNifEnv* env, ErlNifBinary* src, b64url_st* st, ENTERM* ret)
 {
-    cseq_priv* priv = (cseq_priv*) enif_priv_data(env);
+    b64url_priv* priv = (b64url_priv*) enif_priv_data(env);
     size_t chunk_start = st->si;
     unsigned char c1;
     unsigned char c2;
@@ -487,11 +487,11 @@ cseq_b64url_decode(ErlNifEnv* env, ErlNifBinary* src, cseq_st* st, ENTERM* ret)
 
 
 static ENTERM
-cseq_b64url_decode_init(ErlNifEnv* env, int argc, const ENTERM argv[])
+b64url_decode_init(ErlNifEnv* env, int argc, const ENTERM argv[])
 {
     ErlNifBinary src;
-    cseq_priv* priv = (cseq_priv*) enif_priv_data(env);
-    cseq_st* st = NULL;
+    b64url_priv* priv = (b64url_priv*) enif_priv_data(env);
+    b64url_st* st = NULL;
     size_t tlen;
     int status;
     ENTERM ret;
@@ -517,15 +517,15 @@ cseq_b64url_decode_init(ErlNifEnv* env, int argc, const ENTERM argv[])
         tlen += 2;
     }
 
-    st = cseq_st_alloc(env, priv, &src, tlen);
+    st = b64url_st_alloc(env, priv, &src, tlen);
     if(st == NULL) {
         ret = make_error(env, priv, priv->atom_nomem);
         goto error;
     }
 
-    status = cseq_b64url_decode(env, &src, st, &ret);
+    status = b64url_decode(env, &src, st, &ret);
 
-    return cseq_st_dec_ret(env, st, status, ret);
+    return b64url_st_dec_ret(env, st, status, ret);
 
 error:
     if(st != NULL) {
@@ -537,11 +537,11 @@ error:
 
 
 static ENTERM
-cseq_b64url_decode_cont(ErlNifEnv* env, int argc, const ENTERM argv[])
+b64url_decode_cont(ErlNifEnv* env, int argc, const ENTERM argv[])
 {
     ErlNifBinary src;
-    cseq_priv* priv = (cseq_priv*) enif_priv_data(env);
-    cseq_st* st = NULL;
+    b64url_priv* priv = (b64url_priv*) enif_priv_data(env);
+    b64url_st* st = NULL;
     ENTERM ret;
     int status;
 
@@ -565,9 +565,9 @@ cseq_b64url_decode_cont(ErlNifEnv* env, int argc, const ENTERM argv[])
         return enif_make_badarg(env);
     }
 
-    status = cseq_b64url_decode(env, &src, st, &ret);
+    status = b64url_decode(env, &src, st, &ret);
 
-    return cseq_st_dec_ret(env, st, status, ret);
+    return b64url_st_dec_ret(env, st, status, ret);
 }
 
 
@@ -576,9 +576,9 @@ static unsigned char CHECK_A2B[64] =
 
 
 static ENTERM
-cseq_b64url_check_tables(ErlNifEnv* env, int argc, const ENTERM argv[])
+b64url_check_tables(ErlNifEnv* env, int argc, const ENTERM argv[])
 {
-    cseq_priv* priv = (cseq_priv*) enif_priv_data(env);
+    b64url_priv* priv = (b64url_priv*) enif_priv_data(env);
     ENTERM pos;
     int i;
 
@@ -617,11 +617,11 @@ cseq_b64url_check_tables(ErlNifEnv* env, int argc, const ENTERM argv[])
 }
 
 static ErlNifFunc funcs[] = {
-    {"encode_init", 1, cseq_b64url_encode_init},
-    {"encode_cont", 2, cseq_b64url_encode_cont},
-    {"decode_init", 1, cseq_b64url_decode_init},
-    {"decode_cont", 2, cseq_b64url_decode_cont},
-    {"check_tables", 0, cseq_b64url_check_tables}
+    {"encode_init", 1, b64url_encode_init},
+    {"encode_cont", 2, b64url_encode_cont},
+    {"decode_init", 1, b64url_decode_init},
+    {"decode_cont", 2, b64url_decode_cont},
+    {"check_tables", 0, b64url_check_tables}
 };
 
 
