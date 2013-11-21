@@ -124,6 +124,12 @@ make_bad_len(Bin) when size(Bin) rem 4 == 0 ->
     <<"A", Bin/binary>>.
 
 
+% These functions are copy/pasted from couch_util to avoid
+% the direct dependency. The goal of this project is to replace
+% these in couch_util anyway so when that happens they'll only
+% exist here for these tests.
+
+
 couch_encode_base64url(Url) ->
     Url1 = iolist_to_binary(re:replace(base64:encode(Url), "=+$", "")),
     Url2 = iolist_to_binary(re:replace(Url1, "/", "_", [global])),
