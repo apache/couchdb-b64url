@@ -546,32 +546,28 @@ b64url_decode_cont(ErlNifEnv* env, int argc, const ENTERM argv[])
     int status;
 
     if(argc != 2) {
-        goto badarg;
+        return enif_make_badarg(env);
     }
 
     if(!enif_inspect_iolist_as_binary(env, argv[0], &src)) {
-        goto badarg;
+        return enif_make_badarg(env);
     }
 
     if(!enif_get_resource(env, argv[1], priv->res_st, (void**) &st)) {
-        goto badarg;
+        return enif_make_badarg(env);
     }
 
     if(!check_pid(env, st)) {
-        goto badarg;
+        return enif_make_badarg(env);
     }
 
     if(src.size != st->len) {
-        goto badarg;
+        return enif_make_badarg(env);
     }
 
     status = b64url_decode(env, &src, st, &ret);
 
     return b64url_st_dec_ret(env, st, status, ret);
-
-badarg:
-    ret = enif_make_badarg(env);
-    return ret;
 }
 
 
