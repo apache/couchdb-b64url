@@ -542,7 +542,7 @@ b64url_decode_cont(ErlNifEnv* env, int argc, const ENTERM argv[])
     ErlNifBinary src;
     b64url_priv* priv = (b64url_priv*) enif_priv_data(env);
     b64url_st* st = NULL;
-    ENTERM ret;
+    ENTERM ret = priv->atom_error;
     int status;
 
     if(argc != 2) {
