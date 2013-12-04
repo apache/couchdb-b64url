@@ -24,10 +24,12 @@ typedef struct
 typedef struct
 {
     ErlNifPid     pid;
-    ErlNifBinary* tgt;
+    ErlNifBinary  tgt;
     size_t        len;
     size_t        si;
     size_t        ti;
+    char          res_released;
+    char          bin_released;
 } b64url_st;
 
 
@@ -162,12 +164,10 @@ b64url_st_alloc(ErlNifEnv* env, b64url_priv* priv, ErlNifBinary* src, size_t tle
     st->len = src->size;
     st->si = 0;
     st->ti = 0;
-    st->tgt = (ErlNifBinary*) enif_alloc(sizeof(ErlNifBinary));
-    if(st->tgt == NULL) {
-        goto error;
-    }
+    st->res_released = 0;
+    st->bin_released = 0;
 
-    if(!enif_alloc_binary(tlen, st->tgt)) {
+    if(!enif_alloc_binary(tlen, &(st->tgt))) {
         goto error;
     }
 
@@ -175,6 +175,7 @@ b64url_st_alloc(ErlNifEnv* env, b64url_priv* priv, ErlNifBinary* src, size_t tle
 
 error:
     if(st != NULL) {
+        st->res_released = 1;
         enif_release_resource(st);
     }
     return NULL;
@@ -186,9 +187,8 @@ b64url_st_free(ErlNifEnv* env, void* obj)
 {
     b64url_st* st = (b64url_st*) obj;
 
-    if(st->tgt != NULL) {
-        enif_release_binary(st->tgt);
-        enif_free(st->tgt);
+    if(!st->bin_released) {
+        enif_release_binary(&(st->tgt));
     }
 }
 
@@ -199,9 +199,8 @@ b64url_st_enc_ret(ErlNifEnv* env, b64url_st* st, int status)
     ENTERM ret;
 
     if(status == ST_OK) {
-        ret = make_ok(env, priv, enif_make_binary(env, st->tgt));
-        enif_free(st->tgt);
-        st->tgt = NULL;
+        ret = make_ok(env, priv, enif_make_binary(env, &(st->tgt)));
+        st->bin_released = 1;
     } else if(status == ST_PARTIAL) {
         ret = make_partial(env, priv, enif_make_resource(env, st));
     } else {
@@ -209,7 +208,11 @@ b64url_st_enc_ret(ErlNifEnv* env, b64url_st* st, int status)
         ret = enif_make_badarg(env);
     }
 
-    enif_release_resource(st);
+    if(!st->res_released) {
+        st->res_released = 1;
+        enif_release_resource(st);
+    }
+
     return ret;
 }
 
@@ -219,9 +222,8 @@ b64url_st_dec_ret(ErlNifEnv* env, b64url_st* st, int status, ENTERM ret)
     b64url_priv* priv = (b64url_priv*) enif_priv_data(env);
 
     if(status == ST_OK) {
-        ret = make_ok(env, priv, enif_make_binary(env, st->tgt));
-        enif_free(st->tgt);
-        st->tgt = NULL;
+        ret = make_ok(env, priv, enif_make_binary(env, &(st->tgt)));
+        st->bin_released = 1;
     } else if(status == ST_ERROR) {
         ret = make_error(env, priv, ret);
     } else if(status == ST_PARTIAL) {
@@ -231,7 +233,11 @@ b64url_st_dec_ret(ErlNifEnv* env, b64url_st* st, int status, ENTERM ret)
         ret = enif_make_badarg(env);
     }
 
-    enif_release_resource(st);
+    if(!st->res_released) {
+        st->res_released = 1;
+        enif_release_resource(st);
+    }
+
     return ret;
 }
 
@@ -291,6 +297,7 @@ static inline b64url_status
 b64url_encode(ErlNifEnv* env, ErlNifBinary* src, b64url_st* st)
 {
     size_t chunk_start = st->si;
+    size_t rem;
     unsigned char c1;
     unsigned char c2;
     unsigned char c3;
@@ -303,10 +310,10 @@ b64url_encode(ErlNifEnv* env, ErlNifBinary* src, b64url_st* st)
         c2 = src->data[st->si++];
         c3 = src->data[st->si++];
 
-        st->tgt->data[st->ti++] = B64URL_B2A[(c1 >> 2) & 0x3F];
-        st->tgt->data[st->ti++] = B64URL_B2A[((c1 << 4) | (c2 >> 4)) & 0x3F];
-        st->tgt->data[st->ti++] = B64URL_B2A[((c2 << 2) | (c3 >> 6)) & 0x3F];
-        st->tgt->data[st->ti++] = B64URL_B2A[c3 & 0x3F];
+        st->tgt.data[st->ti++] = B64URL_B2A[(c1 >> 2) & 0x3F];
+        st->tgt.data[st->ti++] = B64URL_B2A[((c1 << 4) | (c2 >> 4)) & 0x3F];
+        st->tgt.data[st->ti++] = B64URL_B2A[((c2 << 2) | (c3 >> 6)) & 0x3F];
+        st->tgt.data[st->ti++] = B64URL_B2A[c3 & 0x3F];
 
         if(st->si - chunk_start > BYTES_PER_PERCENT) {
             if(do_consume_timeslice(env)) {
@@ -317,17 +324,18 @@ b64url_encode(ErlNifEnv* env, ErlNifBinary* src, b64url_st* st)
         }
     }
 
-    if(src->size % 3 == 1) {
+    rem = src->size % 3;
+    if(rem == 1) {
         c1 = src->data[st->si];
-        st->tgt->data[st->ti++] = B64URL_B2A[(c1 >> 2) & 0x3F];
-        st->tgt->data[st->ti++] = B64URL_B2A[(c1 << 4) & 0x3F];
-    } else if(src->size % 3 == 2) {
+        st->tgt.data[st->ti++] = B64URL_B2A[(c1 >> 2) & 0x3F];
+        st->tgt.data[st->ti++] = B64URL_B2A[(c1 << 4) & 0x3F];
+    } else if(rem == 2) {
         c1 = src->data[st->si];
         c2 = src->data[st->si+1];
-        st->tgt->data[st->ti++] = B64URL_B2A[(c1 >> 2) & 0x3F];
-        st->tgt->data[st->ti++] = B64URL_B2A[((c1 << 4) | (c2 >> 4)) & 0x3F];
-        st->tgt->data[st->ti++] = B64URL_B2A[(c2 << 2) & 0x3F];
-    } else {
+        st->tgt.data[st->ti++] = B64URL_B2A[(c1 >> 2) & 0x3F];
+        st->tgt.data[st->ti++] = B64URL_B2A[((c1 << 4) | (c2 >> 4)) & 0x3F];
+        st->tgt.data[st->ti++] = B64URL_B2A[(c2 << 2) & 0x3F];
+    } else if(rem != 0) {
         assert(0 == 1 && "Inavlid length calculation");
     }
 
@@ -378,6 +386,7 @@ b64url_encode_init(ErlNifEnv* env, int argc, const ENTERM argv[])
 
 error:
     if(st != NULL) {
+        st->res_released = 1;
         enif_release_resource(st);
     }
 
@@ -424,6 +433,7 @@ b64url_decode(ErlNifEnv* env, ErlNifBinary* src, b64url_st* st, ENTERM* ret)
 {
     b64url_priv* priv = (b64url_priv*) enif_priv_data(env);
     size_t chunk_start = st->si;
+    size_t rem;
     unsigned char c1;
     unsigned char c2;
     unsigned char c3;
@@ -443,9 +453,9 @@ b64url_decode(ErlNifEnv* env, ErlNifBinary* src, b64url_st* st, ENTERM* ret)
             return ST_ERROR;
         }
 
-        st->tgt->data[st->ti++] = (c1 << 2) | (c2 >> 4);
-        st->tgt->data[st->ti++] = (c2 << 4) | (c3 >> 2);
-        st->tgt->data[st->ti++] = (c3 << 6) | c4;
+        st->tgt.data[st->ti++] = (c1 << 2) | (c2 >> 4);
+        st->tgt.data[st->ti++] = (c2 << 4) | (c3 >> 2);
+        st->tgt.data[st->ti++] = (c3 << 6) | c4;
 
         if(st->si - chunk_start > BYTES_PER_PERCENT) {
             if(do_consume_timeslice(env)) {
@@ -456,7 +466,8 @@ b64url_decode(ErlNifEnv* env, ErlNifBinary* src, b64url_st* st, ENTERM* ret)
         }
     }
 
-    if(src->size % 4 == 2) {
+    rem = src->size % 4;
+    if(rem == 2) {
         c1 = B64URL_A2B[src->data[st->si]];
         c2 = B64URL_A2B[src->data[st->si+1]];
 
@@ -465,8 +476,8 @@ b64url_decode(ErlNifEnv* env, ErlNifBinary* src, b64url_st* st, ENTERM* ret)
             return ST_ERROR;
         }
 
-        st->tgt->data[st->ti++] = (c1 << 2) | (c2 >> 4);
-    } else if(src->size % 4 == 3) {
+        st->tgt.data[st->ti++] = (c1 << 2) | (c2 >> 4);
+    } else if(rem == 3) {
         c1 = B64URL_A2B[src->data[st->si]];
         c2 = B64URL_A2B[src->data[st->si+1]];
         c3 = B64URL_A2B[src->data[st->si+2]];
@@ -476,9 +487,9 @@ b64url_decode(ErlNifEnv* env, ErlNifBinary* src, b64url_st* st, ENTERM* ret)
             return ST_ERROR;
         }
 
-        st->tgt->data[st->ti++] = (c1 << 2) | (c2 >> 4);
-        st->tgt->data[st->ti++] = (c2 << 4) | (c3 >> 2);
-    } else {
+        st->tgt.data[st->ti++] = (c1 << 2) | (c2 >> 4);
+        st->tgt.data[st->ti++] = (c2 << 4) | (c3 >> 2);
+    } else if(rem != 0) {
         assert(0 == 1 && "invalid source length");
     }
 
@@ -529,6 +540,7 @@ b64url_decode_init(ErlNifEnv* env, int argc, const ENTERM argv[])
 
 error:
     if(st != NULL) {
+        st->res_released = 1;
         enif_release_resource(st);
     }
 
