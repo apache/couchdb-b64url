@@ -253,7 +253,7 @@ load(ErlNifEnv* env, void** priv, ENTERM info)
     }
 
     res = enif_open_resource_type(
-            env, NULL, "couch_seq", b64url_st_free, flags, NULL);
+            env, NULL, "b64url_st", b64url_st_free, flags, NULL);
     if(res == NULL) {
         return 1;
     }
