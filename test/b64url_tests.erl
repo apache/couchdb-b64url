@@ -1,87 +1,95 @@
 -module(b64url_tests).
--compile(export_all).
 
--include_lib("proper/include/proper.hrl").
+
 -include_lib("eunit/include/eunit.hrl").
 
 
-table_test_() ->
-    ?_assertEqual(ok, b64url:check_tables()).
+-define(MAX_SIZE, 6401).
+-define(NUM_TESTS, 500).
 
 
-proper_test_() ->
-    PropErOpts = [
-        {to_file, user},
-        {max_size, 6401},
-        {numtests, 500}
-    ],
-    {timeout, 3600, ?_assertEqual([], proper:module(?MODULE, PropErOpts))}.
+table_test() ->
+    ?assertEqual(ok, b64url:check_tables()).
 
 
-prop_encode_binary() ->
-    ?FORALL(Bin, binary(), begin
+encode_binary_test() ->
+    lists:foreach(fun(_) ->
+        Bin = gen_binary(),
         A = couch_encode_base64url(Bin),
         B = b64url:encode(Bin),
-        A == B
-    end).
+        ?assertEqual(A, B)
+    end, lists:seq(1, ?NUM_TESTS)).
 
 
-prop_encode_iolist() ->
-    ?FORALL(IoList, shallow_iolist(), begin
+encode_iolist_test() ->
+    lists:foreach(fun(_) ->
+        IoList = shallow_iolist(),
         A = couch_encode_base64url(iolist_to_binary(IoList)),
         B = b64url:encode(IoList),
-        A == B
-    end).
+        ?assertEqual(A, B)
+    end, lists:seq(1, ?NUM_TESTS)).
 
 
-prop_decode_binary() ->
-    ?FORALL(Bin, binary(), begin
+decode_binary_test() ->
+    lists:foreach(fun(_) ->
+        Bin = gen_binary(),
         B64UrlBin = couch_encode_base64url(Bin),
         Dec = b64url:decode(B64UrlBin),
-        Dec == Bin
-    end).
+        ?assertEqual(Bin, Dec)
+    end, lists:seq(1, ?NUM_TESTS)).
 
 
-prop_decode_iolist() ->
-    ?FORALL(IoList, shallow_b64_iolist(), begin
+decode_iolist_test() ->
+    lists:foreach(fun(_) ->
+        IoList = shallow_b64_iolist(),
         A = couch_decode_base64url(iolist_to_binary(IoList)),
         B = b64url:decode(IoList),
-        A == B
-    end).
+        ?assertEqual(A, B)
+    end, lists:seq(1, ?NUM_TESTS)).
 
 
-prop_decode_binary_error() ->
-    ?FORALL({ErrBin, BlockPos}, bad_binary(), begin
+decode_binary_error_test() ->
+    lists:foreach(fun(_) ->
+        {ErrBin, BlockPos} = bad_binary(),
         Dec = b64url:decode(ErrBin),
-        Dec == {error, {bad_block, BlockPos}}
-    end).
+        ?assertEqual({error, {bad_block, BlockPos}}, Dec)
+    end, lists:seq(1, ?NUM_TESTS)).
 
 
-prop_decode_bad_length() ->
-    ?FORALL(Bin, bad_len_binary(), begin
-        try
-            b64url:decode(Bin),
-            false
-        catch error:badarg ->
-            true
-        end
-    end).
+decode_bad_length_test() ->
+    lists:foreach(fun(_) ->
+        Bin = bad_len_binary(),
+        ?assertError(badarg, b64url:decode(Bin))
+    end, lists:seq(1, ?NUM_TESTS)).
+
+
+gen_binary() ->
+    case get(random_seed) of
+        undefined ->
+            random:seed(os:timestamp());
+        _ ->
+            ok
+    end,
+    % -1 here so that zero is a possibility
+    Length = random:uniform(?MAX_SIZE) - 1,
+    Bytes = tl([random:uniform(256)-1 || _ <- lists:seq(0, Length)]),
+    list_to_binary(Bytes).
 
 
 shallow_iolist() ->
-    ?LET(Bin, binary(), to_iolist(Bin)).
+    to_iolist(gen_binary()).
 
 
 shallow_b64_iolist() ->
-    ?LET(Bin, binary(), to_iolist(couch_encode_base64url(Bin))).
+    to_iolist(couch_encode_base64url(gen_binary())).
 
 
 bad_binary() ->
-    ?LET(Bin, binary(), insert_error(Bin)).
+    insert_error(gen_binary()).
 
 
 bad_len_binary() ->
-    ?LET(Bin, binary(), make_bad_len(Bin)).
+    make_bad_len(gen_binary()).
 
 
 to_iolist(<<>>) ->
