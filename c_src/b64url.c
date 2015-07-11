@@ -15,6 +15,12 @@
 
 #include "erl_nif.h"
 
+#ifdef _WIN32
+#define INLINE __inline
+#else
+#define INLINE inline
+#endif
+
 
 typedef ERL_NIF_TERM ENTERM;
 
@@ -93,7 +99,7 @@ const unsigned char B64URL_A2B[256] = {
 
 #define BYTES_PER_PERCENT 64
 
-static inline int
+static INLINE int
 do_consume_timeslice(ErlNifEnv* env) {
 #if(ERL_NIF_MAJOR_VERSION >= 2 && ERL_NIF_MINOR_VERSION >= 4)
     return enif_consume_timeslice(env, 1);
@@ -103,7 +109,7 @@ do_consume_timeslice(ErlNifEnv* env) {
 }
 
 
-static inline ENTERM
+static INLINE ENTERM
 make_atom(ErlNifEnv* env, const char* name)
 {
     ENTERM ret;
@@ -114,21 +120,21 @@ make_atom(ErlNifEnv* env, const char* name)
 }
 
 
-static inline ENTERM
+static INLINE ENTERM
 make_ok(ErlNifEnv* env, b64url_priv* priv, ENTERM value)
 {
     return enif_make_tuple2(env, priv->atom_ok, value);
 }
 
 
-static inline ENTERM
+static INLINE ENTERM
 make_error(ErlNifEnv* env, b64url_priv* priv, ENTERM value)
 {
     return enif_make_tuple2(env, priv->atom_error, value);
 }
 
 
-static inline ENTERM
+static INLINE ENTERM
 make_bad_block(ErlNifEnv* env, b64url_priv* priv, size_t pos)
 {
     ENTERM pterm = enif_make_uint64(env, pos);
@@ -136,14 +142,14 @@ make_bad_block(ErlNifEnv* env, b64url_priv* priv, size_t pos)
 }
 
 
-static inline ENTERM
+static INLINE ENTERM
 make_partial(ErlNifEnv* env, b64url_priv* priv, ENTERM value)
 {
     return enif_make_tuple2(env, priv->atom_partial, value);
 }
 
 
-static inline int
+static INLINE int
 check_pid(ErlNifEnv* env, b64url_st* st)
 {
     ErlNifPid self_pid;
@@ -304,7 +310,7 @@ unload(ErlNifEnv* env, void* priv)
 }
 
 
-static inline b64url_status
+static INLINE b64url_status
 b64url_encode(ErlNifEnv* env, ErlNifBinary* src, b64url_st* st)
 {
     size_t chunk_start = st->si;
@@ -439,7 +445,7 @@ b64url_encode_cont(ErlNifEnv* env, int argc, const ENTERM argv[])
 }
 
 
-static inline b64url_status
+static INLINE b64url_status
 b64url_decode(ErlNifEnv* env, ErlNifBinary* src, b64url_st* st, ENTERM* ret)
 {
     b64url_priv* priv = (b64url_priv*) enif_priv_data(env);
