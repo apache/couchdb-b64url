@@ -411,6 +411,7 @@ b64url_encode_cont(ErlNifEnv* env, int argc, const ENTERM argv[])
     ErlNifBinary src;
     b64url_priv* priv = (b64url_priv*) enif_priv_data(env);
     b64url_st* st = NULL;
+    void* res = NULL;
     int status;
 
     if(argc != 2) {
@@ -421,9 +422,11 @@ b64url_encode_cont(ErlNifEnv* env, int argc, const ENTERM argv[])
         return enif_make_badarg(env);
     }
 
-    if(!enif_get_resource(env, argv[1], priv->res_st, (void**) &st)) {
+    if(!enif_get_resource(env, argv[1], priv->res_st, &res)) {
         return enif_make_badarg(env);
     }
+
+    st = (b64url_st*) res;
 
     if(!check_pid(env, st)) {
         return enif_make_badarg(env);
@@ -565,6 +568,7 @@ b64url_decode_cont(ErlNifEnv* env, int argc, const ENTERM argv[])
     ErlNifBinary src;
     b64url_priv* priv = (b64url_priv*) enif_priv_data(env);
     b64url_st* st = NULL;
+    void* res = NULL;
     ENTERM ret = priv->atom_error;
     int status;
 
@@ -576,9 +580,11 @@ b64url_decode_cont(ErlNifEnv* env, int argc, const ENTERM argv[])
         return enif_make_badarg(env);
     }
 
-    if(!enif_get_resource(env, argv[1], priv->res_st, (void**) &st)) {
+    if(!enif_get_resource(env, argv[1], priv->res_st, &res)) {
         return enif_make_badarg(env);
     }
+
+    st = (b64url_st*) res;
 
     if(!check_pid(env, st)) {
         return enif_make_badarg(env);
