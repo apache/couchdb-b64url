@@ -1,4 +1,6 @@
 .eunit/
 c_src/*.o
 ebin/
-priv/*.so
+priv/
+.rebar/
+vc110.pdb
