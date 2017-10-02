@@ -64,16 +64,8 @@ decode_bad_length_test() ->
 
 
 gen_binary() ->
-    case get(random_seed) of
-        undefined ->
-            random:seed(os:timestamp());
-        _ ->
-            ok
-    end,
-    % -1 here so that zero is a possibility
-    Length = random:uniform(?MAX_SIZE) - 1,
-    Bytes = tl([random:uniform(256)-1 || _ <- lists:seq(0, Length)]),
-    list_to_binary(Bytes).
+    Length = crypto:rand_uniform(0, ?MAX_SIZE),
+    crypto:strong_rand_bytes(Length).
 
 
 shallow_iolist() ->
@@ -93,31 +85,31 @@ bad_len_binary() ->
 
 
 to_iolist(<<>>) ->
-    case random:uniform(2) of
-        1 -> <<>>;
-        2 -> [<<>>]
+    case crypto:rand_uniform(0,2) of
+        0 -> <<>>;
+        1 -> [<<>>]
     end;
 to_iolist(B) when is_binary(B), size(B) > 0 ->
-    S = random:uniform(size(B)),
+    S = crypto:rand_uniform(1, size(B) + 1),
     <<First:S/binary, Second/binary>> = B,
-    case random:uniform(3) of
-        1 ->
+    case crypto:rand_uniform(0, 3) of
+        0 ->
             [to_iolist(First), Second];
-        2 ->
+        1 ->
             [First, to_iolist(Second)];
-        3 ->
+        2 ->
             [First, Second]
     end.
 
 
 insert_error(B) when is_binary(B), size(B) < 2 ->
-    case random:uniform(2) of
-        1 -> {<<122, 255>>, 0};
-        2 -> {<<122, 122, 255>>, 0}
+    case crypto:rand_uniform(0, 2) of
+        0 -> {<<122, 255>>, 0};
+        1 -> {<<122, 122, 255>>, 0}
     end;
 insert_error(B) when is_binary(B) ->
     B64 = couch_encode_base64url(B),
-    S = random:uniform(size(B64)-1),
+    S = crypto:rand_uniform(0, size(B64)),
     <<First:S/binary, _:1/binary, Second/binary>> = B64,
     {<<First:S/binary, 255, Second/binary>>, 4 * (S div 4)}.
 
