@@ -97,7 +97,6 @@ spawn_workers(NumWorkers, St) ->
 
 
 run_worker(St) ->
-    random:seed(erlang:now()),
     receive
         start -> ok
     end,
@@ -116,8 +115,8 @@ run_worker(St, Started) ->
 
 
 do_round_trip(St) ->
-    Size = St#st.minsize + random:uniform(St#st.maxsize - St#st.minsize),
-    Data = crypto:rand_bytes(Size),
+    Size = crypto:rand_uniform(St#st.minsize,  St#st.maxsize + 1),
+    Data = crypto:strong_rand_bytes(Size),
     Encoded = (St#st.module):encode(Data),
     Data = (St#st.module):decode(Encoded),
     St#st{total_bytes=St#st.total_bytes+Size}.
@@ -137,10 +136,8 @@ decode(Url64) ->
     Padding = list_to_binary(lists:duplicate((4 - size(Url2) rem 4) rem 4, $=)),
     base64:decode(<<Url2/binary, Padding/binary>>).
 
-
 randomize(List) ->
-    random:seed(erlang:now()),
-    List0 = [{random:uniform(), L} || L <- List],
+    List0 = [{crypto:rand_uniform(0, 1 bsl 32), L} || L <- List],
     List1 = lists:sort(List0),
     [L || {_, L} <- List1].
 
