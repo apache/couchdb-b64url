@@ -115,7 +115,7 @@ run_worker(St, Started) ->
 
 
 do_round_trip(St) ->
-    Size = crypto:rand_uniform(St#st.minsize,  St#st.maxsize + 1),
+    Size = St#st.minsize + b64url_rand:uniform(St#st.maxsize - St#st.minsize),
     Data = crypto:strong_rand_bytes(Size),
     Encoded = (St#st.module):encode(Data),
     Data = (St#st.module):decode(Encoded),
@@ -137,7 +137,7 @@ decode(Url64) ->
     base64:decode(<<Url2/binary, Padding/binary>>).
 
 randomize(List) ->
-    List0 = [{crypto:rand_uniform(0, 1 bsl 32), L} || L <- List],
+    List0 = [{b64url_rand:uniform(), L} || L <- List],
     List1 = lists:sort(List0),
     [L || {_, L} <- List1].
 
