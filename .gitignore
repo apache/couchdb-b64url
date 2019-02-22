@@ -4,3 +4,4 @@ ebin/
 priv/
 .rebar/
 vc110.pdb
+compile_commands.json
