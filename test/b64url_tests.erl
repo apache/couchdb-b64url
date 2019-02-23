@@ -65,7 +65,7 @@ decode_bad_length_test() ->
 
 gen_binary() ->
     % -1 to allow for 0 length
-    Length = b64url_rand:uniform(?MAX_SIZE) - 1,
+    Length = rand:uniform(?MAX_SIZE) - 1,
     crypto:strong_rand_bytes(Length).
 
 
@@ -86,14 +86,14 @@ bad_len_binary() ->
 
 
 to_iolist(<<>>) ->
-    case b64url_rand:uniform(2) of
+    case rand:uniform(2) of
         1 -> <<>>;
         2 -> [<<>>]
     end;
 to_iolist(B) when is_binary(B), size(B) > 0 ->
-    S = b64url_rand:uniform(size(B)),
+    S = rand:uniform(size(B)),
     <<First:S/binary, Second/binary>> = B,
-    case b64url_rand:uniform(3) of
+    case rand:uniform(3) of
         1 ->
             [to_iolist(First), Second];
         2 ->
@@ -104,13 +104,13 @@ to_iolist(B) when is_binary(B), size(B) > 0 ->
 
 
 insert_error(B) when is_binary(B), size(B) < 2 ->
-    case b64url_rand:uniform(2) of
+    case rand:uniform(2) of
         1 -> {<<122, 255>>, 0};
         2 -> {<<122, 122, 255>>, 0}
     end;
 insert_error(B) when is_binary(B) ->
     B64 = couch_encode_base64url(B),
-    S = b64url_rand:uniform(size(B64) - 1),
+    S = rand:uniform(size(B64) - 1),
     <<First:S/binary, _:1/binary, Second/binary>> = B64,
     {<<First:S/binary, 255, Second/binary>>, 4 * (S div 4)}.
 
