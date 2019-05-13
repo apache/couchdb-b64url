@@ -30,15 +30,6 @@ encode_iolist_test() ->
     end, lists:seq(1, ?NUM_TESTS)).
 
 
-decode_binary_test() ->
-    lists:foreach(fun(_) ->
-        Bin = gen_binary(),
-        B64UrlBin = couch_encode_base64url(Bin),
-        Dec = b64url:decode(B64UrlBin),
-        ?assertEqual(Bin, Dec)
-    end, lists:seq(1, ?NUM_TESTS)).
-
-
 decode_binary_error_test() ->
     lists:foreach(fun(_) ->
         {ErrBin, BlockPos} = bad_binary(),
