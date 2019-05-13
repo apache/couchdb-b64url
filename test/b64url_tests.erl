@@ -39,15 +39,6 @@ decode_binary_test() ->
     end, lists:seq(1, ?NUM_TESTS)).
 
 
-decode_iolist_test() ->
-    lists:foreach(fun(_) ->
-        IoList = shallow_b64_iolist(),
-        A = couch_decode_base64url(iolist_to_binary(IoList)),
-        B = b64url:decode(IoList),
-        ?assertEqual(A, B)
-    end, lists:seq(1, ?NUM_TESTS)).
-
-
 decode_binary_error_test() ->
     lists:foreach(fun(_) ->
         {ErrBin, BlockPos} = bad_binary(),
