@@ -1,0 +1,21 @@
+github:
+  description: "URL-safe Base64 encoder"
+  labels:
+    - couchdb
+    - erlang
+    - nif
+  features:
+    issues: true
+  enabled_merge_buttons:
+    squash: true
+    rebase: true
+    merge: true
+  protected_branches:
+    main:
+      required_status_checks:
+        strict: true
+
+notifications:
+    commits: commits@couchdb.apache.org
+    issues: notifications@couchdb.apache.org
+    pullrequests: notifications@couchdb.apache.org
