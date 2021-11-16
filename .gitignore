@@ -5,3 +5,6 @@ priv/
 .rebar/
 vc110.pdb
 compile_commands.json
+
+_build/
+c_src/*.d
