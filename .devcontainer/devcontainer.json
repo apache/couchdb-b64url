@@ -1,0 +1,7 @@
+{
+    "image": "erlang:24",
+    
+    "extensions": [
+        "erlang-ls.erlang-ls"
+    ]
+}
