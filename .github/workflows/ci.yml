@@ -18,10 +18,8 @@ jobs:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     env:
-      # Set to 1 for verbose rebar3 logging
-      DEBUG: 0
-      # Set to 1 for even more verbose rebar3 logging
-      DIAGNOSTIC: 0
+      # Define to something other than empty string to enable verbose rebar3 logging
+      DEBUG: ''
     steps:
       - name: Check out repository code
         uses: actions/checkout@v2
