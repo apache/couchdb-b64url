@@ -27,6 +27,7 @@ jobs:
           persist-credentials: false
           submodules: recursive
       - name: Setup Erlang
+        id: setup-beam
         uses: ./.github/actions/setup-beam
         with:
           otp-version: ${{ matrix.otp-version }}
@@ -34,10 +35,21 @@ jobs:
       - name: Setup MSVC toolchain
         if: ${{ matrix.os == 'windows-latest' }}
         uses: ./.github/actions/msvc-dev-cmd
+      - name: Check coding style with erlfmt
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: rebar3 fmt --check
+        continue-on-error: true
       - name: Compile
         run: rebar3 compile
       - name: EUnit tests
         run: rebar3 eunit
+      - name: Restore dialyzer PLT from cache
+        uses: actions/cache@v2
+        with:
+          path: ~/.cache/rebar3/rebar3_*_plt
+          key: ${{ runner.os }}-${{ steps.setup-beam.outputs.otp-version }}
+      - name: Run dialyzer analysis
+        run: rebar3 as test dialyzer
       - name: Setup tmate session on job failure
         uses: ./.github/actions/tmate
         if: ${{ failure() }}
