@@ -11,8 +11,10 @@
 % the License.
 
 {application, b64url, [
-    {description, "A small NIF for encoding Base64 URL encoding/decoding."},
+    {description, "URL-safe Base64 encoder"},
     {vsn, git},
     {registered, []},
-    {applications, [kernel, stdlib]}
+    {applications, [kernel, stdlib]},
+    {licenses, ["Apache 2.0"]},
+    {links, [{"GitHub", "https://github.com/apache/couchdb-b64url"}]}
 ]}.
