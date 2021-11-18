@@ -2,6 +2,7 @@
     "image": "erlang:24",
     
     "extensions": [
-        "erlang-ls.erlang-ls"
+        "erlang-ls.erlang-ls",
+        "ms-vscode.cpptools"
     ]
 }
