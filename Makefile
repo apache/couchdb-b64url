@@ -12,6 +12,7 @@
 
 REBAR?=rebar3
 
+VERSION = $(shell git describe --tags --always --first-parent)
 
 .PHONY: all
 # target: all - Makes everything
@@ -27,6 +28,19 @@ build:
 .PHONY: check
 # target: check - Checks if project builds and passes all the tests
 check: build eunit
+
+
+.PHONY: dist
+# target: dist - Generate source release
+# A little bit of explanation for the untar + sed + tar dance below.
+# During development we dynamically generate the vsn in the .app file
+# using {vsn, git}. We can't do that in the actual source release
+# because it's not a git repo, so we inject the version string into the
+# archived app.src file and then repackage the archive for shipping.
+dist:
+	@git archive --prefix=b64url-${VERSION}/ HEAD | tar xf -
+	@sed --in-place -e "s/{vsn, git}/{vsn, \"${VERSION}\"}/" b64url-${VERSION}/src/b64url.app.src
+	@tar czf b64url-${VERSION}.tar.gz b64url-${VERSION}
 
 
 .PHONY: clean
