@@ -10,7 +10,7 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-REBAR?=rebar
+REBAR?=rebar3
 
 
 .PHONY: all
@@ -33,7 +33,6 @@ check: build eunit
 # target: clean - Removes build artifacts
 clean:
 	$(REBAR) clean
-	rm -f test/*.beam
 
 
 .PHONY: distclean
@@ -52,7 +51,3 @@ eunit:
 # target: help - Prints this help
 help:
 	@egrep "^# target:" Makefile | sed -e 's/^# target: //g' | sort
-
-
-%.beam: %.erl
-	erlc -o test/ $<
